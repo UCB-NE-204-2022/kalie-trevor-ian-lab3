@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 class charge_transport_model():
     '''
@@ -40,7 +41,7 @@ class charge_transport_model():
         self.N_yelements = np.shape(self.y_range)[0]
 
         # XY mesh for plotting later
-        self.X, self.Y = np.meshgrid(y_range, x_range)
+        self.X, self.Y = np.meshgrid(self.y_range, self.x_range)
         
         # find anodes
         left_pixel = self.x_range >= 3.375 +.25
@@ -68,7 +69,7 @@ class charge_transport_model():
         guard_ring_idx = np.concatenate((gr_left_idx,gr_right_idx))
 
         # detector all 0
-        geom_map = np.zeros((N_xelements, N_yelements), dtype=int)
+        geom_map = np.zeros((self.N_xelements, self.N_yelements), dtype=int)
 
         # contacts
         geom_map[-1,:] = 1 # cathode
@@ -150,20 +151,21 @@ class charge_transport_model():
         self.WP = V
         
         # plot relaxation
-        plt.figure()
-        plt.plot(np.arange(1,iterr), resid_store)
-        plt.grid("on")
-        plt.xlabel("Iteration Number")
-        plt.ylabel("Difference")
-        #plt.yscale("log")
-        plt.show()
+        # plt.figure()
+        # plt.plot(np.arange(1,iterr), resid_store)
+        # plt.grid("on")
+        # plt.xlabel("Iteration Number")
+        # plt.ylabel("Difference")
+        # #plt.yscale("log")
+        # plt.show()
     
     def plot_WP(self):
         plt.figure()
-        plt.imshow(self.V,interpolation="None",cmap='jet',vmin=-0.1)
+        plt.imshow(self.WP,interpolation="None",cmap='jet',vmin=-0.1)
         plt.xticks([])
         plt.yticks([])
-        plt.title('Weighting Potential of Anode 5')
+        # plt.title('Weighting Potential of Anode 5')
+        #TODO add dict to grab contact name from contact int
         plt.colorbar()
         plt.show()
         
@@ -266,7 +268,7 @@ class charge_transport_model():
         plt.tick_params(labelbottom="off")
         plt.xlabel("Time")
         plt.ylabel("Charge (au)")
-        plt.title('Signal for interaction at 5 mm depth')
+        plt.title('Signal for interaction at '+str(depth_mm)+' mm depth')
         plt.legend()
         plt.show()
         return Qsignal_h, Qsignal_e, Qsignal
