@@ -1,5 +1,14 @@
-# Lab 3
+# NE204 Lab 3
 Kalie Knecht, Ian Kolaja, and Trevor Arino
+
+# Dependencies
+* Code developed and tested in Python version 3.8.13
+* Packages used:
+    * numpy
+    * matplotlib
+    * h5py
+    * sys
+    * jupyter notebook/jupyter-lab
 
 # Data Info
 Data can be found [here](https://drive.google.com/drive/folders/1zlU33uZfci9Pb7yWbz8ett7hW3fvVEHg?usp=sharing).
