@@ -191,7 +191,7 @@ class charge_transport_model():
     def drift_particles_cathode(self,
         slice_idx,
         depth_mm,
-        Nt = 10000,
+        Nt = 6000,
         show_plot=False):
         '''
         Drift particles and return Q in au
@@ -303,7 +303,7 @@ class charge_transport_model():
     def drift_particles_anode(self,
             slice_idx,
             depth_mm,
-            Nt = 10000,
+            Nt = 6000,
             show_plot=False):
             '''
             Drift particles and return Q in au
