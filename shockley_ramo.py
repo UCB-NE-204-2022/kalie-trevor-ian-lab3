@@ -190,7 +190,9 @@ class charge_transport_model():
         
     def drift_particles(self,
         slice_idx,
-        depth_mm):
+        depth_mm,
+        Nt = 6000,
+        show_plot=False):
         '''
         Drift particles and return Q in au
         
@@ -200,6 +202,8 @@ class charge_transport_model():
             slice in detector
         depth_mm: num
             interaction depth in mm
+        Nt: int
+            time to simulate in ns
             
         Returns
         -------
@@ -211,64 +215,88 @@ class charge_transport_model():
             sum of Qh and Qe
         '''
         # Vslice = WPslice
-        # simple signal calculation assuming fixed velocity of one pixel per ns for both electrons and holes
         # holes into wp, electrons out
-        # could easily vectorize to be faster and more pythonic
+        # electron and hole saturation velocities
+        # mobilities taking from literature https://www.sciencedirect.com/science/article/pii/S1738573318303176
+        mu_e = 1350 #cm2/Vs
+        mu_h = 120 #cm2/Vs
+        # Assume parallel plate capacitor, E = V / d
+        # put charge carrier velocity in units of mm/ns 
+        # each time step is 1 ns - just have to add velocity
+        E = 1000 / 1 # 1000 V / 1 cm
+        ve = mu_e * E * 10 ** -9 * 10# mm / ns
+        vh = mu_h * E * 10 ** -9 * 10# mm / ns
         
         # grab slice of weighting potential
         Vslice = self.WP[:,slice_idx]
+        
+        # find initial location idx
+        i0 = np.int(np.floor(depth_mm / self.pixel_size_mm))
 
-        z0 = np.int(np.floor(depth_mm / self.pixel_size_mm))
-
-        # number of time steps in signal
-        Nt = 150
+        # number of time steps in signal in Nanoseconds
+        Nt = Nt
 
         # arrays which will store the induced charge signals
         Qh = np.zeros(Nt, dtype=float)
         Qe = np.zeros(Nt, dtype=float)
 
         # starting positions for electrons and holes
-        zh = z0
-        ze = z0
+        zh = depth_mm
+        ze = depth_mm
+        ih = i0
+        ie = i0
 
         # holes into wp
         t = 0
         for t in range(1, Nt):
-            if (zh<=self.N_yelements-1):
-                dw = Vslice[zh] - Vslice[zh-1]
+            if (ih <= self.N_yelements - 1):
+                dw = Vslice[ih] - Vslice[ih-1]
                 Qh[t] = 1.0*dw    
-            elif (zh>self.N_yelements-1):
+            elif (ih>self.N_yelements-1):
                 continue
-            zh = zh+1
+            # update new location with hole velocity
+            zh = zh + vh
+            ih = np.int(np.floor(zh / self.pixel_size_mm))
 
         # electrons out of wp
         t = 0
         for t in range(1, Nt):
-            if (ze>=0):
-                dw = Vslice[ze] - Vslice[ze+1]
+            if (ie >= 0):
+                dw = Vslice[ie] - Vslice[ie+1]
                 Qe[t] = -1.0*dw
-            elif (ze<0):
+            elif (ie<0):
                 continue
-            ze = ze-1
+            # update new location with electron velocity
+            ze = ze - ve
+            ie = np.int(np.floor(ze / self.pixel_size_mm))
 
         # take cumulative sums
-        Qsignal_h = np.cumsum(Qh)
-        Qsignal_e = np.cumsum(Qe)
-        Qsignal = np.cumsum(Qe + Qh)
+        self.Qsignal_h = np.cumsum(Qh)
+        self.Qsignal_e = np.cumsum(Qe)
+        self.Qsignal = np.cumsum(Qe + Qh)
+
         
-        # plot results
-        # plot
-        plt.figure()
-        plt.plot(Qsignal_e, 'm', linewidth=1.5,label='Qe')
-        plt.plot(Qsignal_h, 'c', linewidth=1.5,label='Qh')
-        plt.plot(Qsignal, 'k', linewidth=2,label='Qsignal')
-        plt.grid("on")
-        #plt.ylim(0,1)
-        plt.xlim(0, Nt)
-        plt.tick_params(labelbottom="off")
-        plt.xlabel("Time")
-        plt.ylabel("Charge (au)")
-        plt.title('Signal for interaction at '+str(depth_mm)+' mm depth')
-        plt.legend()
-        plt.show()
-        return Qsignal_h, Qsignal_e, Qsignal
+        if show_plot:
+        
+            # plot results
+            # plot
+            plt.figure()
+            plt.plot(self.Qsignal_e, 'm', linewidth=1.5,label='Qe')
+            plt.plot(self.Qsignal_h, 'c', linewidth=1.5,label='Qh')
+            plt.plot(self.Qsignal, 'k', linewidth=2,label='Qsignal')
+            plt.grid("on")
+            #plt.ylim(0,1)
+            plt.xlim(0, Nt)
+            plt.tick_params(labelbottom="off")
+            plt.xlabel("Time (ns)")
+            plt.ylabel("Charge (au)")
+            plt.title('Signal for interaction at '+str(depth_mm)+' mm depth')
+            plt.legend()
+            plt.show()
+            
+        # find rise time 
+        t10 = np.argwhere(self.Qsignal >= self.Qsignal.max()*.1).flatten()[0]
+        t90 = np.argwhere(self.Qsignal >= self.Qsignal.max()*.9).flatten()[0]
+        rise_time = t90 - t10
+        return rise_time
+    
